@@ -2,21 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+// import ModalEditTransaksi from "./components/ModalEditTransaksi"; // <--- Nanti import di sini
 
 export default function TransaksiPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [akuns, setAkuns] = useState([]); 
   
+  // State untuk Filter
   const [filters, setFilters] = useState({
     start_date: "",
     end_date: "",
     unit: ""
   });
 
+  // State untuk kontrol Modal (Tetap dipertahankan agar bisa melempar data ke komponen luar)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingData, setEditingData] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -45,22 +46,6 @@ export default function TransaksiPage() {
     }
   };
 
-  const fetchAkuns = async (jenis) => {
-    try {
-      const token = localStorage.getItem("adminToken");
-      const res = await fetch(`http://localhost:8000/api/akun/jenis/${jenis}`, {
-        headers: { 
-          Accept: "application/json",
-          Authorization: `Bearer ${token}` 
-        }
-      });
-      const data = await res.json();
-      if (data.success) setAkuns(data.data);
-    } catch (err) {
-      console.error("Gagal ambil akun", err);
-    }
-  };
-
   useEffect(() => {
     fetchTransactions();
   }, []);
@@ -69,64 +54,10 @@ export default function TransaksiPage() {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
+  // Fungsi saat tombol Edit di klik (Hanya menyiapkan data dan membuka modal)
   const openEditModal = (t) => {
-    // Masukkan data murni tanpa format ribuan ke dalam state
-    setEditingData({ 
-      ...t,
-      jumlah: t.jumlah.toString().split('.')[0].replace(/[^0-9]/g, ''),
-      qty: t.qty.toString().replace(/[^0-9.]/g, '')
-    });
-    fetchAkuns(t.jenis_transaksi);
+    setEditingData(t);
     setIsEditModalOpen(true);
-  };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const token = localStorage.getItem("adminToken");
-      
-      // Bersihkan data sebelum kirim: Pastikan jumlah & qty adalah angka
-      const payload = {
-        unit: editingData.unit,
-        akun_kode: editingData.akun_kode,
-        jenis_transaksi: editingData.jenis_transaksi,
-        sumber: editingData.sumber,
-        keterangan: editingData.keterangan || "",
-        qty: parseFloat(editingData.qty),
-        satuan: editingData.satuan,
-        jumlah: parseInt(editingData.jumlah.toString().replace(/[^0-9]/g, '')),
-        tanggal: editingData.tanggal,
-        no_bukti: editingData.no_bukti || ""
-      };
-
-      // Gunakan PUT dengan JSON (Pastikan api.php menggunakan Route::put atau Route::match)
-      const res = await fetch(`http://localhost:8000/api/transaksi/${editingData.id_transaksi}`, {
-        method: "PUT", 
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await res.json();
-
-      if (res.ok && result.success) {
-        alert("Data Berhasil Diperbarui!");
-        setIsEditModalOpen(false);
-        fetchTransactions();
-      } else {
-        alert("Gagal: " + (result.message || "Validasi gagal"));
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan sistem/koneksi");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
@@ -217,80 +148,16 @@ export default function TransaksiPage() {
         )}
       </div>
 
-      {/* EDIT MODAL SECTION */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 no-print">
-          <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-lg font-bold text-black uppercase">Edit Transaksi #{editingData.id_transaksi}</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-black text-2xl font-bold">&times;</button>
-            </div>
-            
-            <form onSubmit={handleUpdate} className="grid grid-cols-2 gap-4 text-left">
-              <div>
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Unit</label>
-                <select className="w-full border p-2 rounded text-black font-semibold" value={editingData.unit} onChange={(e) => setEditingData({...editingData, unit: e.target.value})}>
-                  <option value="PMI">PMI (Markas)</option>
-                  <option value="Ambulance">Ambulance</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Jenis</label>
-                <select className="w-full border p-2 rounded text-black bg-gray-100 font-semibold" value={editingData.jenis_transaksi} disabled>
-                  <option value="masuk">Uang Masuk</option>
-                  <option value="keluar">Uang Keluar</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Akun (Kode Akun)</label>
-                <select className="w-full border p-2 rounded text-black font-semibold" value={editingData.akun_kode} onChange={(e) => setEditingData({...editingData, akun_kode: e.target.value})}>
-                  <option value="">Pilih Akun</option>
-                  {akuns.map(a => <option key={a.akun_kode} value={a.akun_kode}>{a.akun_kode} - {a.nama}</option>)}
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Sumber Dana</label>
-                <select className="w-full border p-2 rounded text-black font-semibold" value={editingData.sumber} onChange={(e) => setEditingData({...editingData, sumber: e.target.value})}>
-                  <option value="Hibah">Hibah</option>
-                  <option value="Bulan Dana">Bulan Dana</option>
-                  <option value="Pihak Lain">Pihak Lain</option>
-                  <option value="Lainnya">Lainnya</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Uraian / Keterangan</label>
-                <textarea className="w-full border p-2 rounded text-black font-medium" rows="2" value={editingData.keterangan || ""} onChange={(e) => setEditingData({...editingData, keterangan: e.target.value})}></textarea>
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Qty</label>
-                <input type="text" className="w-full border p-2 rounded text-black font-semibold" value={editingData.qty} onChange={(e) => setEditingData({...editingData, qty: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Satuan</label>
-                <input type="text" className="w-full border p-2 rounded text-black font-semibold" value={editingData.satuan} onChange={(e) => setEditingData({...editingData, satuan: e.target.value})} />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Nominal (Rp) - Masukkan Angka Saja</label>
-                <input type="text" className="w-full border p-2 rounded text-black font-bold text-lg" value={editingData.jumlah} onChange={(e) => setEditingData({...editingData, jumlah: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1 uppercase text-black">Tanggal</label>
-                <input type="date" className="w-full border p-2 rounded text-black font-semibold" value={editingData.tanggal} onChange={(e) => setEditingData({...editingData, tanggal: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1 uppercase text-black">No Bukti</label>
-                <input type="text" className="w-full border p-2 rounded text-black font-semibold" value={editingData.no_bukti || ""} onChange={(e) => setEditingData({...editingData, no_bukti: e.target.value})} />
-              </div>
-              <div className="col-span-2 flex gap-2 mt-4">
-                <button type="submit" disabled={isSubmitting} className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400">
-                  {isSubmitting ? "Sedang Memperbarui..." : "SIMPAN PERUBAHAN"}
-                </button>
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 bg-gray-200 text-black py-3 rounded-lg font-bold hover:bg-gray-300 transition">BATAL</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* RENDER MODAL EDIT DISINI (DIPANGGIL DARI FILE TERPISAH NANTINYA) */}
+      {/* {isEditModalOpen && (
+        <ModalEditTransaksi 
+          data={editingData} 
+          onClose={() => setIsEditModalOpen(false)} 
+          onRefresh={fetchTransactions} 
+        />
+      )} 
+      */}
+
     </div>
   );
 }
