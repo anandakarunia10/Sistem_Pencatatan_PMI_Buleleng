@@ -10,10 +10,14 @@ export default function InputTransaksiForm() {
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
+    unit: "PMI",
     keterangan: "",
     akun: "",
     jenis: "keluar",
+    sumber: "Bulan Dana",
     nominal: "",
+    qty: 1,
+    satuan: "",
     tanggal: new Date().toISOString().split("T")[0],
     noBukti: "",
     file: null,
@@ -21,11 +25,9 @@ export default function InputTransaksiForm() {
 
   useEffect(() => {
     if (!formData.jenis) return;
-    
-
 
     const fetchAkun = async () => {
-      setLoading(true); 
+      setLoading(true);
       try {
         const token = localStorage.getItem("adminToken");
         const res = await fetch(
@@ -62,10 +64,15 @@ export default function InputTransaksiForm() {
     try {
       const token = localStorage.getItem("adminToken");
       const formPayload = new FormData();
+      
+      formPayload.append("unit", formData.unit);
       formPayload.append("tanggal", formData.tanggal);
       formPayload.append("akun_kode", formData.akun);
       formPayload.append("jenis_transaksi", formData.jenis);
+      formPayload.append("sumber", formData.sumber);
       formPayload.append("jumlah", formData.nominal);
+      formPayload.append("qty", formData.qty);
+      formPayload.append("satuan", formData.satuan);
       formPayload.append("keterangan", formData.keterangan);
       formPayload.append("no_bukti", formData.noBukti);
       if (formData.file) formPayload.append("file", formData.file);
@@ -86,7 +93,6 @@ export default function InputTransaksiForm() {
         router.push("/transaksi");
       } else {
         alert("Gagal: " + (data.message || "Terjadi kesalahan"));
-        console.error("Detail Error:", data.errors || data);
       }
     } catch (err) {
       console.error("Network Error:", err);
@@ -104,160 +110,169 @@ export default function InputTransaksiForm() {
 
         <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8
                        text-center text-red-600 border-b pb-3">
-          Input Transaksi
+          Input Transaksi PMI Buleleng
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
-          {/* Keterangan */}
+          
+          {/* Unit */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Keterangan
-            </label>
-            <input
-  type="text"
-  name="keterangan"
-  value={formData.keterangan}
-  onChange={handleChange}
-  placeholder="Contoh: Pembayaran listrik"
-  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm
-             bg-white text-gray-900 placeholder-gray-400
-             focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-  required
-/>  
-          </div>
-
-          {/* Jenis Transaksi */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Jenis
-            </label>
-            <div className="flex flex-wrap gap-4 sm:gap-6">
-              {["keluar", "masuk"].map((j) => (
-                <label key={j} className="flex items-center gap-2 cursor-pointer">
+            <label className="block text-sm font-bold text-black mb-2">Unit</label>
+            <div className="flex gap-4">
+              {["PMI", "Ambulance"].map((u) => (
+                <label key={u} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
-                    name="jenis"
-                    value={j}
-                    checked={formData.jenis === j}
+                    name="unit"
+                    value={u}
+                    checked={formData.unit === u}
                     onChange={handleChange}
-                    className="accent-indigo-600 w-4 h-4"
+                    className="accent-red-600 w-4 h-4"
                   />
-                  <span className="capitalize text-gray-700">{j}</span>
+                  <span className="text-black font-medium">{u}</span>
                 </label>
               ))}
             </div>
           </div>
 
+          {/* Keterangan */}
+          <div>
+            <label className="block text-sm font-bold text-black mb-1">Keterangan (Uraian)</label>
+            <input
+              type="text"
+              name="keterangan"
+              value={formData.keterangan}
+              onChange={handleChange}
+              placeholder="Isi..."
+              className="w-full p-3 border border-gray-400 rounded-lg focus:ring-2 focus:ring-red-400 outline-none text-black font-medium placeholder-gray-500"
+              required
+            />  
+          </div>
+
+          {/* Grid: Jenis & Sumber */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-black mb-1">Jenis Transaksi</label>
+              <select 
+                name="jenis" 
+                value={formData.jenis} 
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-400 rounded-lg text-black font-medium"
+              >
+                <option value="keluar">Keluar</option>
+                <option value="masuk">Masuk</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-black mb-1">Sumber Dana</label>
+              <select 
+                name="sumber" 
+                value={formData.sumber} 
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-400 rounded-lg text-black font-medium"
+              >
+                <option value="Hibah">Hibah</option>
+                <option value="Bulan Dana">Bulan Dana</option>
+                <option value="Pihak Lain">Pihak Lain</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+          </div>
+
           {/* Akun */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Akun
-            </label>
-           <select
-  name="akun"
-  value={formData.akun}
-  onChange={handleChange}
-  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm
-             bg-white text-gray-900
-             focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-  required
->
+            <label className="block text-sm font-bold text-black mb-1">Akun</label>
+            <select
+              name="akun"
+              value={formData.akun}
+              onChange={handleChange}
+              className="w-full p-3 border border-gray-400 rounded-lg text-black font-medium"
+              required
+            >
               <option value="">-- Pilih Akun --</option>
-              {loading ? (
-                <option disabled>Loading...</option>
-              ) : (
-                akunList.map((akun) => (
-                  <option key={akun.id} value={akun.akun_kode}>
-                    {akun.akun_kode} - {akun.nama}
-                  </option>
-                ))
-              )}
+              {akunList.map((akun) => (
+                <option key={akun.id} value={akun.akun_kode} className="text-black">
+                  {akun.akun_kode} - {akun.nama}
+                </option>
+              ))}
             </select>
+          </div>
+
+          {/* Qty & Satuan */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-black mb-1">Qty</label>
+              <input
+                type="number"
+                name="qty"
+                value={formData.qty}
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-400 rounded-lg text-black font-medium"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-black mb-1">Satuan</label>
+              <input
+                type="text"
+                name="satuan"
+                value={formData.satuan}
+                onChange={handleChange}
+                placeholder="Liter, Box, Pcs"
+                className="w-full p-3 border border-gray-400 rounded-lg text-black font-medium placeholder-gray-500"
+                required
+              />
+            </div>
           </div>
 
           {/* Nominal & Tanggal */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nominal
-              </label>
+              <label className="block text-sm font-bold text-black mb-1">Total Nominal</label>
               <input
-  type="number"
-  name="nominal"
-  value={formData.nominal}
-  onChange={handleChange}
-  placeholder="100000"
-  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm
-             bg-white text-gray-900 placeholder-gray-400
-             focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-  required
-/>
+                type="number"
+                name="nominal"
+                value={formData.nominal}
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-400 rounded-lg text-black font-bold"
+                required
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tanggal
-              </label>
+              <label className="block text-sm font-bold text-black mb-1">Tanggal</label>
               <input
-  type="date"
-  name="tanggal"
-  value={formData.tanggal}
-  onChange={handleChange}
-  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm
-             bg-white text-gray-900
-             focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-  required
-/>
+                type="date"
+                name="tanggal"
+                value={formData.tanggal}
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-400 rounded-lg text-black font-medium"
+                required
+              />
             </div>
           </div>
 
-          {/* Bukti */}
-          <div className="p-4 sm:p-5 mt-6 border-t-4 border-red-600 rounded-lg bg-gray-50">
-            <h3 className="text-lg font-semibold text-red-700 mb-3">
-              Bukti Transaksi
-            </h3>
-
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              No Bukti
-            </label>
-          <input
-  type="text"
-  name="noBukti"
-  value={formData.noBukti}
-  onChange={handleChange}
-  placeholder="Contoh: 001/INV/2025"
-  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm
-             bg-white text-gray-900 placeholder-gray-400
-             focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition mb-3"
-/>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              File Bukti
-            </label>
+          {/* Bukti File */}
+          <div className="p-4 bg-gray-100 border-t-4 border-red-600 rounded-lg">
+            <label className="block text-sm font-bold text-black mb-1">No Bukti</label>
             <input
-              type="file"
-              name="file"
+              type="text"
+              name="noBukti"
+              value={formData.noBukti}
               onChange={handleChange}
-              className="w-full text-sm text-gray-600
-                         file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
-                         file:text-sm file:font-semibold file:bg-indigo-100
-                         file:text-indigo-700 hover:file:bg-indigo-200 transition"
+              className="w-full p-3 border border-gray-400 rounded-lg mb-3 text-black font-medium"
             />
-            {formData.file && (
-              <p className="mt-2 text-sm text-gray-500">
-                Terpilih: {formData.file.name}
-              </p>
-            )}
+            <label className="block text-sm font-bold text-black mb-1">Upload File Bukti</label>
+            <input type="file" name="file" onChange={handleChange} className="w-full text-black font-medium" />
           </div>
 
           {/* Submit */}
-          <div className="flex justify-center sm:justify-end">
+          <div className="flex justify-end">
             <button
               type="submit"
-              className={`px-8 py-3 bg-indigo-600 text-white font-medium
-                          rounded-lg shadow-md hover:bg-indigo-700 hover:shadow-lg transition
-                          ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`px-10 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md transition ${loading ? "opacity-50" : ""}`}
               disabled={loading}
             >
-              {loading ? "Menyimpan..." : "Simpan"}
+              {loading ? "Memproses..." : "Simpan Transaksi"}
             </button>
           </div>
         </form>

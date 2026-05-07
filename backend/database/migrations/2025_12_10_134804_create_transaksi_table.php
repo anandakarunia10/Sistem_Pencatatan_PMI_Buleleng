@@ -6,30 +6,51 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('transaksi', function (Blueprint $table) {
-            $table->id();
-            // Gunakan string untuk kode akun agar 0 di depan (misal: 0011) tidak hilang
+            // Menggunakan id_transaksi agar sinkron dengan foreign key di tabel Jurnal
+            $table->id('id_transaksi'); 
+
+            // REVISI: Data dipilah menjadi 2 (Ambulance dan PMI)
+            $table->enum('unit', ['PMI', 'Ambulance'])->default('PMI');
+
+            // Relasi ke tabel akun
             $table->string('akun_kode'); 
+            
             $table->enum('jenis_transaksi', ['masuk', 'keluar']);
-            $table->decimal('jumlah', 15, 2); // decimal lebih akurat untuk uang
+
+            // REVISI: Tambahan sumber (hibah, bulan dana, pihak lain)
+            $table->enum('sumber', ['Hibah', 'Bulan Dana', 'Pihak Lain', 'Lainnya'])->nullable();
+
+            // REVISI: Tambahan detail qty, satuan, dan jumlah
+            $table->decimal('jumlah', 15, 2); // Nilai total (Qty x Harga Satuan jika ada)
+            $table->integer('qty')->default(1);
+            $table->string('satuan')->nullable(); // Misal: Liter, Box, Rim, Orang
+            
             $table->date('tanggal');
+            
+            // Keterangan akan diisi Uraian (nantinya di UI ditambahkan Kode Akun)
             $table->text('keterangan')->nullable();
+            
             $table->string('no_bukti')->nullable();
             $table->string('file_path')->nullable();
-            
-            // Perbaikan utama: pastikan panjangnya cukup (string default 255)
             $table->string('status')->default('pending'); 
             
             $table->unsignedBigInteger('user_id')->default(1);
             $table->timestamps();
 
-            // Opsional: Hubungkan ke tabel akun jika sudah ada
-            // $table->foreign('akun_kode')->references('akun_kode')->on('akun')->onDelete('cascade');
+            // Indexing untuk optimasi fitur "Filter Date" dan pemilahan Unit
+            $table->index(['unit', 'tanggal']);
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('transaksi');
