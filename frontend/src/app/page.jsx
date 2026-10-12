@@ -1,23 +1,25 @@
-"use client";
+import HomeClient from "./HomeClient";
 
-import { useState, useEffect } from "react";
-import LandingPage from "../components/ui/landingpage/LandingPage";
-import Loading from "@/components/loading/loading";
+export const metadata = {
+  title: "PMI Kabupaten Buleleng | Website Resmi",
 
+  description:
+    "Website resmi PMI Kabupaten Buleleng yang menyediakan informasi mengenai Unit Transfusi Darah (UTD), pelayanan ambulans, penanggulangan bencana, pelatihan pertolongan pertama, pembinaan relawan, kegiatan kemanusiaan, serta akses Sistem Pencatatan Keuangan PMI Kabupaten Buleleng.",
+
+  keywords: [
+    "PMI Kabupaten Buleleng",
+    "PMI Buleleng",
+    "Palang Merah Indonesia",
+    "Donor Darah",
+    "Unit Transfusi Darah",
+    "Pelayanan Ambulans",
+    "Penanggulangan Bencana",
+    "Pelatihan Pertolongan Pertama",
+    "Relawan PMI",
+    "PMI Bali",
+  ],
+};
 
 export default function Page() {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulasi delay untuk menampilkan loading
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000); // 1 detik, bisa diganti sesuai kebutuhan
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading) return <Loading />;
-
-  return <LandingPage />;
+  return <HomeClient />;
 }

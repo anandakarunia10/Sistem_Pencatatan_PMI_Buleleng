@@ -11,11 +11,10 @@ class EditTransaksiController extends Controller
 {
     /**
      * Update data transaksi secara spesifik.
-     * Karena Jurnal bersifat dinamis, update di sini otomatis merubah tampilan Jurnal.
      */
     public function update(Request $request, $id)
     {
-        // 1. Cari data berdasarkan Primary Key custom kamu (id_transaksi)
+        // 1. Cari data berdasarkan Primary Key custom  (id_transaksi)
         $transaksi = Transaksi::where('id_transaksi', $id)->first();
 
         if (!$transaksi) {

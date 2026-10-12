@@ -1,26 +1,34 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import TransaksiForm from "@/components/ui/form/TransaksiForm";
+import Loading from "@/components/loading/loading";
 
 export default function TransaksiPageContent() {
-  useEffect(() => {   
-    document.title = "Transaksi | PMI Buleleng";
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.title = "Input Transaksi | PMI Buleleng";
+
+  
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 300); 
+
+    return () => clearTimeout(timer);
   }, []);
 
-  return (
-    <div className="p-4 sm:p-6">
-      {/* Wrapper konten agar tidak ketutup sidebar */}
-      <div className="pl-0 sm:pl-[240px]">
-        <h1 className="text-xl sm:text-2xl font-bold text-black mb-1">
-          Dashboard Transaksi
-        </h1>
-      </div>
+  if (loading) return <Loading />;
 
-      {/* Form tetap ikut layout */}
-      <div className="pl-0 sm:pl-[240px]">
-        <TransaksiForm />
-      </div>
+  return (
+    <div className="min-h-screen bg-gray-100 ml-0 lg:ml-[260px] p-4 sm:p-6">
+      {/* TITLE */}
+      <h1 className="text-xl sm:text-2xl font-bold text-black mb-4">
+        INPUT TRANSAKSI
+      </h1>
+
+      {/* FORM */}
+      <TransaksiForm />
     </div>
   );
 }

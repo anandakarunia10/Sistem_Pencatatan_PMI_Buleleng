@@ -2,197 +2,545 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Akun;
 use App\Models\Transaksi;
-use App\Models\Jurnal;
+use App\Models\DetailTransaksi;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class TransaksiController extends Controller
 {
     /**
-     * Menampilkan daftar transaksi (dengan fitur filter unit & tanggal)
+     * DISPLAY LIST TRANSAKSI
      */
     public function index(Request $request)
     {
-        try {
-            $query = Transaksi::with('akun');
+        $query = Transaksi::with(['akun', 'details']);
 
-            // REVISI: Filter berdasarkan Unit (PMI/Ambulance)
-            if ($request->has('unit') && $request->unit != '') {
-                $query->where('unit', $request->unit);
-            }
-
-            // REVISI: Filter berdasarkan Tanggal (Filter Date)
-            if ($request->has('start_date') && $request->has('end_date') && $request->start_date != '' && $request->end_date != '') {
-                $query->whereBetween('tanggal', [$request->start_date, $request->end_date]);
-            }
-
-            $transaksi = $query->orderBy('tanggal', 'desc')->get();
-            
-            return response()->json([
-                'success' => true,
-                'data' => $transaksi
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mengambil data: ' . $e->getMessage()
-            ], 500);
+        // FILTER UNIT
+        if ($request->has('unit') && $request->unit != '') {
+            $query->where('unit', $request->unit);
         }
+
+        // FILTER START DATE
+        if ($request->has('start_date') && $request->start_date != '') {
+            $query->where('tanggal', '>=', $request->start_date);
+        }
+
+        // FILTER END DATE
+        if ($request->has('end_date') && $request->end_date != '') {
+            $query->where('tanggal', '<=', $request->end_date);
+        }
+
+        $transaksi = $query->orderBy('created_at', 'desc')->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $transaksi
+        ], 200);
     }
 
-    /**
-     * Menyimpan transaksi baru
-     */
+    // Transaksi Baru
     public function store(Request $request)
     {
-        // 1. Validasi Input sesuai Revisi Pak Agus
         $request->validate([
-            'akun_kode'       => 'required|exists:akun,akun_kode',
-            'unit'            => 'required|in:PMI,Ambulance',
-            'jenis_transaksi' => 'required|in:masuk,keluar',
-            'sumber'          => 'required|in:Hibah,Bulan Dana,Pihak Lain,Lainnya',
-            'jumlah'          => 'required|numeric|min:0',
-            'qty'             => 'required|numeric|min:1',
-            'satuan'          => 'required|string|max:50',
+            'unit'            => 'required|string',
+            'keterangan'      => 'required|string',
+            'akun_kode'       => 'required|string',
+            'jenis_transaksi' => 'required|string',
+            'sumber'          => 'required|string',
             'tanggal'         => 'required|date',
-            'keterangan'      => 'nullable|string',
-            'no_bukti'        => 'nullable|string|max:100',
-            'file'            => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'jumlah'          => 'required|numeric',
+
+            // DETAIL
+            'details'             => 'required|array|min:1',
+            'details.*.uraian'    => 'required|string',
+            'details.*.qty'       => 'required|numeric',
+            'details.*.satuan'    => 'required|string',
+            'details.*.harga'     => 'required|numeric',
+            'details.*.subtotal'  => 'required|numeric',
+
+            // FILE
+            'file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
         ]);
 
         DB::beginTransaction();
 
         try {
-            // 2. Upload File Bukti
+
+           // Handle File
             $filePath = null;
+
             if ($request->hasFile('file')) {
-                $filePath = $request->file('file')->store('bukti_transaksi', 'public');
+                $file = $request->file('file');
+                $filePath = $file->store('bukti_transaksi', 'public');
             }
 
-            // 3. Simpan ke Tabel Transaksi
+         // Generate Nomor Transaksi
+            $lastTransaksi = Transaksi::latest('id_transaksi')->first();
+
+            $lastNumber = 0;
+
+            if ($lastTransaksi && $lastTransaksi->nomor_transaksi) {
+
+                $explode = explode('/', $lastTransaksi->nomor_transaksi);
+
+                $lastNumber = (int) end($explode);
+            }
+
+            $newNumber = str_pad(
+                $lastNumber + 1,
+                4,
+                '0',
+                STR_PAD_LEFT
+            );
+
+            $nomorTransaksi =
+                'TRX/' .
+                date('Y') .
+                '/' .
+                date('m') .
+                '/' .
+                $newNumber;
+
+            // Simpan Header Transaksi
             $transaksi = Transaksi::create([
-                'akun_kode'       => $request->akun_kode,
+
+                'nomor_transaksi' => $nomorTransaksi,
+
                 'unit'            => $request->unit,
+                'keterangan'      => $request->keterangan,
+                'akun_kode'       => $request->akun_kode,
                 'jenis_transaksi' => $request->jenis_transaksi,
                 'sumber'          => $request->sumber,
-                'jumlah'          => $request->jumlah,
-                'qty'             => $request->qty,
-                'satuan'          => $request->satuan,
                 'tanggal'         => $request->tanggal,
-                'keterangan'      => $request->keterangan,
+                'jumlah'          => $request->jumlah,
+
+                
+                'qty'             => $request->details[0]['qty'] ?? 1,
+                'satuan'          => $request->details[0]['satuan'] ?? null,
+
                 'no_bukti'        => $request->no_bukti,
                 'file_path'       => $filePath,
+
                 'status'          => 'completed',
+                'status_jurnal'   => 'belum',
+
                 'user_id'         => auth()->id() ?? 1,
             ]);
 
-            // 4. LOGIC JURNAL (Otomatis mencatat ke akuntansi)
-            Jurnal::create([
-                'id_transaksi' => $transaksi->id_transaksi,
-                'akun_kode'    => $request->akun_kode,
-                'posisi'       => $request->jenis_transaksi === 'masuk' ? 'debit' : 'kredit',
-                'jumlah'       => $request->jumlah,
-            ]);
+            // Simpan Detail
+            foreach ($request->details as $item) {
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $transaksi->id_transaksi,
+                    'uraian'       => $item['uraian'],
+                    'qty'          => $item['qty'],
+                    'satuan'       => $item['satuan'],
+                    'harga'        => $item['harga'],
+                    'subtotal'     => $item['subtotal'],
+                ]);
+            }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Transaksi dan Jurnal berhasil disimpan',
-                'data'    => $transaksi->load('akun')
+                'message' => 'Transaksi berhasil disimpan!',
+                'data'    => $transaksi
             ], 201);
 
         } catch (\Exception $e) {
+
             DB::rollBack();
+
+            Log::error(
+                'Gagal simpan transaksi: ' .
+                $e->getMessage()
+            );
+
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Gagal menyimpan transaksi',
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Menampilkan detail satu transaksi
+     * SHOW SINGLE TRANSAKSI
      */
     public function show($id)
     {
-        try {
-            $transaksi = Transaksi::with('akun')->where('id_transaksi', $id)->firstOrFail();
-            return response()->json(['success' => true, 'data' => $transaksi]);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan'], 404);
+        $transaksi = Transaksi::with(['akun', 'details'])
+            ->where('id_transaksi', $id)
+            ->first();
+
+        if (!$transaksi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data transaksi tidak ditemukan.'
+            ], 404);
         }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $transaksi
+        ], 200);
     }
 
     /**
-     * Update Transaksi (Revisi: Tambah Edit)
+     * UPDATE TRANSAKSI
      */
     public function update(Request $request, $id)
     {
-        // Cari transaksi berdasarkan id_transaksi (bukan id)
-        $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
+        $transaksi = Transaksi::where(
+    'id_transaksi',
+    $id
+)->first();
 
-        // HACK: Bersihkan nominal jika ada format koma/titik dari frontend
-        if ($request->has('jumlah')) {
-            $cleanJumlah = str_replace([',', '.'], '', $request->jumlah);
-            $request->merge(['jumlah' => $cleanJumlah]);
-        }
+if (!$transaksi) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Data tidak ditemukan.'
+    ], 404);
+}
+
+/// Kunci edit transaksi jika posting
+if ($transaksi->status_jurnal === 'sudah') {
+    return response()->json([
+        'success' => false,
+        'message' => 'Transaksi sudah diposting ke jurnal dan tidak dapat diedit.'
+    ], 403);
+}
 
         $request->validate([
-            'akun_kode'       => 'required|exists:akun,akun_kode',
-            'unit'            => 'required|in:PMI,Ambulance',
-            'jenis_transaksi' => 'required|in:masuk,keluar',
-            'sumber'          => 'required|in:Hibah,Bulan Dana,Pihak Lain,Lainnya',
-            'jumlah'          => 'required|numeric|min:0',
-            'qty'             => 'required|numeric|min:0', // Revisi: min 0 kalau belum ada barang
-            'satuan'          => 'required|string',
+            'unit'            => 'required|string',
+            'keterangan'      => 'required|string',
+            'akun_kode'       => 'required|string',
+            'jenis_transaksi' => 'required|string',
+            'sumber'          => 'required|string',
             'tanggal'         => 'required|date',
+            'jumlah'          => 'required|numeric',
+
+            'file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
+
+            // DETAIL
+            'details'             => 'required|array|min:1',
+            'details.*.uraian'    => 'required|string',
+            'details.*.qty'       => 'required|numeric',
+            'details.*.satuan'    => 'required|string',
+            'details.*.harga'     => 'required|numeric',
+            'details.*.subtotal'  => 'required|numeric',
         ]);
 
         DB::beginTransaction();
-        try {
-            // Update data transaksi (kecuali file karena PUT ribet dengan file)
-            $transaksi->update($request->all());
 
-            // Update Jurnal agar tetap sinkron
-            Jurnal::where('id_transaksi', $id)->update([
-                'akun_kode' => $request->akun_kode,
-                'posisi'    => $request->jenis_transaksi === 'masuk' ? 'debit' : 'kredit',
-                'jumlah'    => $request->jumlah,
+        try {
+
+            // ===============================
+            // UPDATE HEADER
+            // ===============================
+            $dataUpdate = $request->except([
+                'file',
+                '_method',
+                'details',
+                'nomor_transaksi'
             ]);
 
+            // UPDATE FILE
+            if ($request->hasFile('file')) {
+
+                if (
+                    $transaksi->file_path &&
+                    Storage::disk('public')->exists(
+                        $transaksi->file_path
+                    )
+                ) {
+                    Storage::disk('public')->delete(
+                        $transaksi->file_path
+                    );
+                }
+
+                $newPath = $request
+                    ->file('file')
+                    ->store('bukti_transaksi', 'public');
+
+                $dataUpdate['file_path'] = $newPath;
+            }
+
+            // OPTIONAL
+            $dataUpdate['qty'] =
+                $request->details[0]['qty'] ?? 1;
+
+            $dataUpdate['satuan'] =
+                $request->details[0]['satuan'] ?? null;
+
+            $transaksi->update($dataUpdate);
+
+            // ===============================
+            // HAPUS DETAIL LAMA
+            // ===============================
+            DetailTransaksi::where(
+                'transaksi_id',
+                $transaksi->id_transaksi
+            )->delete();
+
+            // ===============================
+            // SIMPAN DETAIL BARU
+            // ===============================
+            foreach ($request->details as $item) {
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $transaksi->id_transaksi,
+                    'uraian'       => $item['uraian'],
+                    'qty'          => $item['qty'],
+                    'satuan'       => $item['satuan'],
+                    'harga'        => $item['harga'],
+                    'subtotal'     => $item['subtotal'],
+                ]);
+            }
+
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Data berhasil diperbarui']);
+
+            $transaksi->load(['akun', 'details']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi berhasil diperbarui!',
+                'data'    => $transaksi
+            ], 200);
+
         } catch (\Exception $e) {
+
             DB::rollBack();
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+
+            Log::error(
+                'Gagal update transaksi ID ' .
+                $id .
+                ': ' .
+                $e->getMessage()
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui transaksi.',
+                'error'   => $e->getMessage()
+            ], 500);
         }
     }
 
     /**
-     * Menghapus Transaksi
+     * DELETE TRANSAKSI
      */
     public function destroy($id)
     {
+        $transaksi = Transaksi::where(
+    'id_transaksi',
+    $id
+)->first();
+
+if (!$transaksi) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Data tidak ditemukan.'
+    ], 404);
+}
+
+
+// Kunci Hapus jika sudah posting jurnal
+
+if ($transaksi->status_jurnal === 'sudah') {
+    return response()->json([
+        'success' => false,
+        'message' => 'Transaksi sudah diposting ke jurnal dan tidak dapat dihapus.'
+    ], 403);
+}
+
         DB::beginTransaction();
 
         try {
-            $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
-            
-            // Hapus file bukti fisik jika ada
-            if ($transaksi->file_path) Storage::disk('public')->delete($transaksi->file_path);
-            
-            // Hapus data (Jurnal otomatis terhapus karena Cascade Delete di DB)
+
+            // HAPUS DETAIL
+            DetailTransaksi::where(
+                'transaksi_id',
+                $transaksi->id_transaksi
+            )->delete();
+
+            // HAPUS FILE
+            if (
+                $transaksi->file_path &&
+                Storage::disk('public')->exists(
+                    $transaksi->file_path
+                )
+            ) {
+                Storage::disk('public')->delete(
+                    $transaksi->file_path
+                );
+            }
+
+            // HAPUS TRANSAKSI
             $transaksi->delete();
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Transaksi berhasil dihapus']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi berhasil dihapus!'
+            ]);
+
         } catch (\Exception $e) {
+
             DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * POSTING TRANSAKSI
+     */
+    public function posting($id)
+    {
+        $transaksi = Transaksi::where(
+            'id_transaksi',
+            $id
+        )->first();
+
+        if (!$transaksi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data transaksi tidak ditemukan.'
+            ], 404);
+        }
+
+        if ($transaksi->status_jurnal === 'sudah') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sudah diposting sebelumnya.'
+            ], 400);
+        }
+
+        try {
+
+            $transaksi->update([
+                'status_jurnal' => 'sudah'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil diposting!',
+                'status_baru' => 'sudah'
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * POSTING MASSAL
+     */
+    public function postingMassal(Request $request)
+    {
+        $ids = $request->ids;
+
+        if (
+            !$ids ||
+            !is_array($ids) ||
+            count($ids) === 0
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada transaksi dipilih.'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+
+        try {
+
+            foreach ($ids as $id) {
+
+                $transaksi = Transaksi::where(
+                    'id_transaksi',
+                    $id
+                )->first();
+
+                if (!$transaksi) {
+                    continue;
+                }
+
+                if ($transaksi->status_jurnal === 'sudah') {
+                    continue;
+                }
+
+                $transaksi->update([
+                    'status_jurnal' => 'sudah'
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Posting massal berhasil.'
+            ], 200);
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * UNPOSTING
+     */
+    public function unposting($id)
+    {
+        $transaksi = Transaksi::where(
+            'id_transaksi',
+            $id
+        )->first();
+
+        if (!$transaksi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data transaksi tidak ditemukan.'
+            ], 404);
+        }
+
+        try {
+
+            $transaksi->update([
+                'status_jurnal' => 'belum'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil membatalkan jurnal!',
+                'status_baru' => 'belum'
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

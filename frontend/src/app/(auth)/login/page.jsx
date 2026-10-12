@@ -4,26 +4,33 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
+import Loading from "@/components/loading/loading";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-    
   useEffect(() => {
-    document.title = "Login | PMI Buleleng";
+    document.title = "Login | PMI Kabupaten Buleleng";
   }, []);
 
-  const handleLogin = async (e) => {  // fungsi yang menangani proses login saat form disubmit.
+  const handleLogin = async (e) => {
     e.preventDefault();
+
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/login", { // URL backend Laravel
+      const res = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -31,7 +38,7 @@ export default function LoginPage() {
         },
         body: JSON.stringify({ email, password }),
       });
-      
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -40,12 +47,10 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ SIMPAN TOKEN DAN USER
-      localStorage.setItem("adminToken", data.token); // simpan token untuk API transaksi
+      localStorage.setItem("adminToken", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // ✅ REDIRECT LANGSUNG KE HALAMAN TRANSAKSI
-      router.push("/transaksi");
+      router.push("/dashboard");
     } catch (err) {
       console.error(err);
       setError("Gagal terhubung ke server");
@@ -55,78 +60,176 @@ export default function LoginPage() {
   };
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
-      style={{ backgroundImage: "url('/images/login.jpeg')" }}
-    >
-      {/* OVERLAY */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-900/80 via-black/60 to-black/80" />
+    <>
+      {loading && <Loading />}
 
-      {/* CARD */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-        className="
-          relative z-10
-          bg-white/90 backdrop-blur-md
-          p-8 rounded-xl
-          shadow-2xl
-          w-full max-w-sm
-        "
+      <main
+        className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 bg-cover bg-center"
+        style={{
+          backgroundImage: "url('/images/login.jpeg')",
+        }}
       >
-        <h1 className="text-2xl font-bold text-center text-red-700">
-          Login
-        </h1>
-        <p className="text-center text-gray-600 text-sm mt-1">
-          Sistem Keuangan PMI Buleleng
-        </p>
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/65" />
 
-        {error && (
-          <div className="mt-4 text-sm bg-red-100 text-red-700 p-2 rounded">
-            {error}
+        {/* Container */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="
+            relative z-10
+            w-full max-w-sm
+            rounded-3xl
+            bg-white
+            p-8
+            shadow-[0_15px_50px_rgba(0,0,0,0.25)]
+          "
+        >
+          {/* Logo Container */}
+          <div className="flex justify-center -mt-16 mb-4">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-[0_4px_20px_rgba(0,0,0,0.15)] border-4 border-white overflow-hidden">
+              <img
+                src="/images/pmilogo.png"
+                alt="PMI Logo"
+                className="h-full w-full object-contain p-2"
+              />
+            </div>
           </div>
-        )}
 
-        <form onSubmit={handleLogin} className="mt-6 space-y-4">
-          <input
-  type="email"
-  placeholder="Email"
-  value={email}
-  onChange={(e) => setEmail(e.target.value)}
-  className="w-full border border-gray-300 rounded px-3 py-2 
-             text-gray-800 placeholder-gray-400
-             focus:outline-none focus:ring-2 focus:ring-red-500 transition"
-  required
-/>
+          {/* Title */}
+          <div className="mt-5 text-center">
+            <h1 className="text-2xl font-semibold text-gray-800">Login</h1>
 
-         <input
-  type="password"
-  placeholder="Password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  className="w-full border border-gray-300 rounded px-3 py-2 
-             text-gray-800 placeholder-gray-400
-             focus:outline-none focus:ring-2 focus:ring-red-500 transition"
-  required
-/>
+            <p className="mt-1 text-sm text-gray-500">
+              Sistem Keuangan PMI Buleleng
+            </p>
+          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-red-600 text-white py-2 rounded-md shadow hover:bg-red-700 transition disabled:opacity-60"
-          >
-            {loading ? "Masuk..." : "Masuk"}
-          </button>
-        </form>
+          {/* Error */}
+          {error && (
+            <div
+              className="
+                mt-5 rounded-2xl
+                border border-red-100
+                bg-red-50
+                px-4 py-3
+                text-sm text-red-600
+              "
+            >
+              {error}
+            </div>
+          )}
 
-        <p className="text-sm text-center mt-4 text-gray-700">
-          Belum punya akun?{" "}
-          <Link href="/register" className="text-red-600 hover:underline">
-            Daftar
-          </Link>
-        </p>
-      </motion.div>
-    </main>
+          {/* Form */}
+          <form onSubmit={handleLogin} className="mt-6 space-y-5">
+            {/* Email */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Masukkan Email
+              </label>
+
+              <input
+                type="email"
+                placeholder="contoh@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="
+                  w-full rounded-2xl
+                  border border-gray-200
+                  bg-gray-50
+                  px-4 py-3
+                  text-gray-700
+                  placeholder-gray-400
+                  transition
+                  focus:border-red-400
+                  focus:bg-white
+                  focus:outline-none
+                  focus:ring-4 focus:ring-red-100
+                "
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Masukkan Password
+              </label>
+
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="
+                    w-full rounded-2xl
+                    border border-gray-200
+                    bg-gray-50
+                    px-4 py-3 pr-12
+                    text-gray-700
+                    placeholder-gray-400
+                    transition
+                    focus:border-red-400
+                    focus:bg-white
+                    focus:outline-none
+                    focus:ring-4 focus:ring-red-100
+                  "
+                  required
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="
+                    absolute right-4 top-1/2
+                    -translate-y-1/2
+                    text-gray-500
+                    hover:text-gray-700
+                    transition-colors
+                  "
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="
+                w-full rounded-2xl
+                bg-red-600
+                py-3
+                text-sm font-medium text-white
+                transition-all
+                hover:bg-red-700
+                active:scale-[0.98]
+                disabled:opacity-70
+              "
+            >
+              {loading ? "Memproses..." : "Masuk"}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Belum punya akun?{" "}
+            <Link
+              href="/register"
+              className="font-medium text-red-600 transition hover:text-red-700"
+            >
+              Daftar
+            </Link>
+          </p>
+        </motion.div>
+      </main>
+    </>
   );
 }

@@ -1,15 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
-      },
-    ];
+  output: 'export', // Wajib untuk export statis ke Hostinger
+  images: {
+    unoptimized: true, // Wajib ditambahkan jika kamu menggunakan komponen <Image /> dari Next.js
   },
-
-  // ⬇️ TAMBAHKAN INI UNTUK DIAMKAN WARNING
   turbopack: {},
 };
 

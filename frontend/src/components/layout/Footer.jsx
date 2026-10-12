@@ -1,73 +1,132 @@
 "use client";
 
+import Image from "next/image";
+import { MapPin, Phone, Mail, Globe } from "lucide-react";
+import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa6";
+
 export default function Footer() {
   return (
-    <footer className="bg-red-700 text-white mt-10">
-      <div className="ml-0 md:ml-[220px] px-6 py-10 transition-all">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="bg-red-700 mt-16 py-14 text-white">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
 
-          {/* PROFIL */}
-          <div>
-            <h3 className="text-lg font-bold mb-3">
+          {/* KOLOM 1 : LOGO */}
+         <div className="md:col-span-2 flex justify-center">
+  <Image
+    src="/images/pmilogo.png"
+    alt="Logo PMI"
+    width={220}
+    height={220}
+    priority
+    className="w-44 md:w-52 lg:w-56 h-auto object-contain"
+  />
+</div>
+
+          {/* KOLOM 2 : TENTANG */}
+       <div className="md:col-span-4 md:pl-8">
+            <h3 className="text-2xl font-bold mb-4">
               Palang Merah Indonesia
             </h3>
-            <p className="text-sm leading-relaxed">
-              PMI Kabupaten Buleleng merupakan organisasi kemanusiaan
-              yang bergerak di bidang pelayanan sosial, kesehatan,
-              dan kebencanaan untuk masyarakat.
+
+            <p className="text-sm text-red-100 leading-relaxed text-justify">
+              PMI Kabupaten Buleleng adalah organisasi kemanusiaan yang
+              bergerak di bidang sosial, kesehatan, dan penanggulangan bencana
+              dengan prinsip kemanusiaan untuk masyarakat.
             </p>
+
+            {/* SOCIAL */}
+            <div className="mt-6 flex gap-4">
+              <a
+                href="https://www.instagram.com/pmi.buleleng?igsh=MXQ2ZHJpazR3Ymc5cA=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 rounded-full bg-white hover:bg-gray-100 transition shadow-md flex items-center justify-center"
+              >
+                <FaInstagram className="text-xl text-pink-600" />
+              </a>
+
+              <a
+                href="https://www.tiktok.com/@pmi.buleleng?_r=1&_t=ZS-97krtlcHeLY"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 rounded-full bg-white hover:bg-gray-100 transition shadow-md flex items-center justify-center"
+              >
+                <FaTiktok className="text-xl text-black" />
+              </a>
+
+              <a
+                href="https://www.facebook.com/share/1BejtA1B79/?mibextid=wwXIfr"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 rounded-full bg-white hover:bg-gray-100 transition shadow-md flex items-center justify-center"
+              >
+                <FaFacebook className="text-xl text-blue-700" />
+              </a>
+            </div>
           </div>
 
-          {/* LAYANAN */}
-          <div>
-            <h3 className="text-lg font-bold mb-3">Layanan PMI</h3>
-            <ul className="space-y-2 text-sm">
-              <li>• Donor Darah</li>
-              <li>• Unit Transfusi Darah (UTD)</li>
-              <li>• Pelayanan Ambulans</li>
-              <li>• Penanggulangan Bencana</li>
-              <li>• Pertolongan Pertama</li>
-              <li>• Pembinaan Relawan</li>
+          {/* KOLOM 3 : LAYANAN */}
+         <div className="md:col-span-3 md:pl-6 flex flex-col items-center">
+            <h3 className="text-xl font-bold mb-6">
+              Layanan Kami
+            </h3>
+
+            <ul className="space-y-3 text-sm text-red-100 text-center">
+              <li>Unit Transfusi Darah (UTD)</li>
+              <li>Pelayanan Ambulans</li>
+              <li>Penanggulangan Bencana</li>
+              <li>Pelatihan Pertolongan Pertama</li>
+              <li>Pembinaan Relawan</li>
             </ul>
           </div>
 
-          {/* KONTAK */}
-          <div>
-            <h3 className="text-lg font-bold mb-3">Kontak Kami</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                📍 Jl. Yudistira No. 3, Kelurahan Banjar Tegal, Kecamatan Buleleng, Kabupaten Buleleng, Bali 81112.
+          {/* KOLOM 4 : KONTAK */}
+        <div className="md:col-span-3 md:pl-6">
+            <h3 className="text-xl font-bold mb-4">
+              Kontak Kami
+            </h3>
+
+            <ul className="space-y-4 text-sm text-red-100">
+              <li className="flex items-start gap-3">
+                <MapPin size={18} className="shrink-0 mt-0.5" />
+                <span>Jalan Wijaya Kusuma No. 3A, Singaraja - Bali</span>
               </li>
-              <li>📞 Telp: (0362) 23175</li>
-              <li>📧 Email: udd.buleleng@gmail.com</li>
-            <li>
-  🌐 Website:{" "}
-  <a
-    href="https://pmibuleleng.or.id"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-blue-600 hover:underline"
-  >
-    https://pmibuleleng.or.id
-  </a>
-</li>
 
+              <li className="flex items-center gap-3">
+                <Phone size={18} className="shrink-0" />
+                <span>(0362) 22348</span>
+              </li>
 
+              <li className="flex items-center gap-3">
+                <Mail size={18} className="shrink-0" />
+                <span>buleleng@pmibali.or.id</span>
+              </li>
+
+              <li className="flex items-center gap-3">
+                <Mail size={18} className="shrink-0" />
+                <span>kab_buleleng@pmi.or.id</span>
+              </li>
+
+              <li className="flex items-center gap-3">
+                <Globe size={18} className="shrink-0" />
+                <a
+                  href="https://pmibuleleng.or.id"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-white transition"
+                >
+                  pmibuleleng.or.id
+                </a>
+              </li>
             </ul>
           </div>
 
         </div>
 
-        {/* GARIS */}
-       {/* COPYRIGHT */}
-<div className="mt-8">
-  <div className="bg-red-800 text-center py-4 text-sm">
-    © {new Date().getFullYear()}
-    <span className="font-semibold"> PMI Kabupaten Buleleng</span>. 
-    Seluruh hak cipta dilindungi.
-  </div>
-</div>
-
+        {/* FOOTER BOTTOM */}
+        <div className="mt-12 border-t border-white/20 pt-6 text-center text-sm text-red-100">
+          © {new Date().getFullYear()} PMI Kabupaten Buleleng. All Rights Reserved.
+        </div>
       </div>
     </footer>
   );

@@ -17,7 +17,7 @@ export default function LaporanPage() {
   useEffect(() => {
     const fetchLaporan = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/transaksi", {
+        const res = await fetch("http://127.0.0.1:8000/api/transaksi", {
           headers: { "Accept": "application/json" },
         });
         const data = await res.json();
@@ -39,9 +39,13 @@ export default function LaporanPage() {
 
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-bold text-black mb-6 ml-0 md:ml-[180px]">
-        Laporan Transaksi
-      </h1>
+       <div className="pl-0 sm:pl-[240px]">
+
+        <h1 className="text-xl sm:text-2xl font-bold text-black mb-1">
+          LAPORAN TRANSKASI
+        </h1>
+      </div>
+
       {/* kirim data ke LaporanTable */}
       <LaporanTable laporan={laporan} />
     </main>

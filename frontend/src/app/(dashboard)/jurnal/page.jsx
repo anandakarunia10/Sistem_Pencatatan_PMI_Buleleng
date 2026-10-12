@@ -8,7 +8,6 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
 
-  // Set title halaman
   useEffect(() => {
     document.title = "Jurnal | PMI Buleleng";
   }, []);
@@ -16,10 +15,17 @@ export default function Page() {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/transaksi", {
-          headers: { "Accept": "application/json" },
+        const token = localStorage.getItem("adminToken");
+
+        const res = await fetch("http://127.0.0.1:8000/api/transaksi", {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
+
         const data = await res.json();
+
         if (data.success) {
           setTransactions(data.data);
         }
@@ -33,8 +39,18 @@ export default function Page() {
     fetchTransactions();
   }, []);
 
-  // tampilkan loading saat data belum siap
   if (loading) return <Loading />;
 
-  return <JurnalPage transactions={transactions} />;
+  return (
+    <div className="min-h-screen bg-gray-100 ml-0 lg:ml-[260px] p-4 sm:p-6">
+      
+      {/* TITLE */}
+      <h1 className="text-xl sm:text-2xl font-bold text-black mb-4">
+       JURNAL TRANSKASI
+      </h1>
+
+      {/* CONTENT */}
+      <JurnalPage transactions={transactions} />
+    </div>
+  );
 }

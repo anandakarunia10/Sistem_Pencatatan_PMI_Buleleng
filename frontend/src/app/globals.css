@@ -1,114 +1,58 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* ANIMATION */
+  --animate-typing:
+    typing 4s steps(40, end) infinite alternate,
+    blink .8s step-end infinite;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff; /* Paksa putih untuk aplikasi admin agar tetap profesional */
-    --foreground: #171717;
-  }
-}
+  --animate-fadeUp:
+    fadeUp 1s ease-out forwards;
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+  /* TYPING EFFECT */
+  @keyframes typing {
+    0% {
+      width: 0;
+      opacity: 0;
+    }
 
-/* =============================================
-   LOGIC MODUL PRINT (REVISI PAK AGUS)
-   ============================================= */
+    10% {
+      opacity: 1;
+    }
 
-@media print {
-  /* 1. Sembunyikan elemen navigasi dan tombol yang tidak perlu */
-  .no-print, 
-  nav, 
-  aside, 
-  header,
-  button,
-  footer {
-    display: none !important;
-  }
+    60% {
+      width: 100%;
+      opacity: 1;
+    }
 
-  /* 2. Reset Layout: Hilangkan padding sidebar agar tabel full satu kertas */
-  /* Ini menargetkan div utama yang punya padding-left 240px */
-  .sm\:pl-\[240px\], 
-  .pl-0, 
-  .p-4, 
-  .p-6 {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100% !important;
+    85% {
+      width: 100%;
+      opacity: 1;
+    }
+
+    100% {
+      width: 0;
+      opacity: 0;
+    }
   }
 
-  /* 3. Styling Halaman Cetak */
-  @page {
-    size: A4 landscape; /* Atur ke landscape agar kolom Qty & Satuan muat */
-    margin: 1cm;
+  /* CURSOR BLINK */
+  @keyframes blink {
+    50% {
+      border-color: transparent;
+    }
   }
 
-  body {
-    background: white !important;
-    color: black !important;
-    font-size: 10pt;
-  }
+  /* SMOOTH FADE */
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
 
-  /* 4. Tambahkan Judul Laporan Otomatis di Atas */
-  body::before {
-    content: "LAPORAN TRANSAKSI KEUANGAN PMI KABUPATEN BULELENG";
-    display: block;
-    text-align: center;
-    font-size: 14pt;
-    font-weight: bold;
-    margin-bottom: 5px;
-  }
-
-  body::after {
-    content: "Dicetak pada: " counter(page);
-    display: block;
-    text-align: right;
-    font-size: 8pt;
-    margin-top: 10px;
-  }
-
-  /* 5. Paksa Border Tabel Muncul di Print */
-  table {
-    width: 100% !important;
-    border: 1px solid black !important;
-    border-collapse: collapse !important;
-  }
-
-  th, td {
-    border: 1px solid black !important;
-    padding: 6px !important;
-    color: black !important;
-  }
-
-  th {
-    background-color: #eeeeee !important;
-    -webkit-print-color-adjust: exact;
-  }
-
-  /* Hilangkan bayangan/shadow saat print */
-  .shadow-md, .shadow-sm, .shadow-lg {
-    box-shadow: none !important;
-  }
-
-  /* Sembunyikan kolom "Bukti" saat diprint karena link tidak berguna di kertas */
-  table th:last-child, 
-  table td:last-child {
-    display: none !important;
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

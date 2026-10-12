@@ -3,6 +3,7 @@
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import '@/styles/globals.css';
 
 export default function DashboardLayout({ children }) {
   return (

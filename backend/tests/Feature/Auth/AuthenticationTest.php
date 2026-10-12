@@ -1,84 +1,106 @@
 <?php
 
+namespace Tests\Feature;
+
 use App\Models\User;
-use Illuminate\Support\Facades\RateLimiter;
-use Laravel\Fortify\Features;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
-test('login screen can be rendered', function () {
-    $response = $this->get(route('login'));
+class AuthControllerTest extends TestCase
+{
+    use RefreshDatabase;
 
-    $response->assertStatus(200);
-});
+    // ==========================================
+    // 1. SKENARIO: Login Berhasil (Admin)
+    // ==========================================
+    public function test_admin_success_login()
+    {
+        // Buat data dummy admin sesuai dengan pengecekan role di controller Anda
+        $admin = User::create([
+            'name'     => 'Admin Test',
+            'email'    => 'admin@example.com',
+            'password' => Hash::make('password123'),
+            'role'     => 'admin',
+        ]);
 
-test('users can authenticate using the login screen', function () {
-    $user = User::factory()->withoutTwoFactor()->create();
+        $response = $this->postJson('/api/login', [
+            'email'    => 'admin@example.com',
+            'password' => 'password123',
+        ]);
 
-    $response = $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
+        // Verifikasi status HTTP 200 dan pesan sukses
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'message' => 'Login berhasil'
+                 ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
-});
-
-test('users with two factor enabled are redirected to two factor challenge', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
+        // Pastikan token terbuat dan user dikirimkan
+        $this->assertNotNull($response->json('token'));
+        $this->assertEquals('admin', $response->json('user.role'));
     }
 
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]);
+    // ==========================================
+    // 2. SKENARIO: Login Gagal (User Biasa / Bukan Admin)
+    // ==========================================
+    public function test_non_admin_access_denied()
+    {
+        // Buat user dengan role 'user'
+        $user = User::create([
+            'name'     => 'User Biasa',
+            'email'    => 'user@example.com',
+            'password' => Hash::make('password123'),
+            'role'     => 'user',
+        ]);
 
-    $user = User::factory()->create();
+        $response = $this->postJson('/api/login', [
+            'email'    => 'user@example.com',
+            'password' => 'password123',
+        ]);
 
-    $user->forceFill([
-        'two_factor_secret' => encrypt('test-secret'),
-        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-        'two_factor_confirmed_at' => now(),
-    ])->save();
+        // Verifikasi status HTTP 403 (Forbidden) sesuai pengecekan if ($user->role !== 'admin')
+        $response->assertStatus(403)
+                 ->assertJson([
+                     'message' => 'Akses ditolak. Hanya admin yang bisa login.'
+                 ]);
+    }
 
-    $response = $this->post(route('login'), [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
+    // ==========================================
+    // 3. SKENARIO: Login Gagal (Password Salah)
+    // ==========================================
+    public function test_login_fails_with_wrong_password()
+    {
+        User::create([
+            'name'     => 'Admin Test',
+            'email'    => 'admin@example.com',
+            'password' => Hash::make('password123'),
+            'role'     => 'admin',
+        ]);
 
-    $response->assertRedirect(route('two-factor.login'));
-    $response->assertSessionHas('login.id', $user->id);
-    $this->assertGuest();
-});
+        $response = $this->postJson('/api/login', [
+            'email'    => 'admin@example.com',
+            'password' => 'wrongpassword',
+        ]);
 
-test('users can not authenticate with invalid password', function () {
-    $user = User::factory()->create();
+        // Verifikasi status HTTP 401 (Unauthorized) sesuai pengecekan Hash::check
+        $response->assertStatus(401)
+                 ->assertJson([
+                     'message' => 'Email atau password salah'
+                 ]);
+    }
 
-    $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'wrong-password',
-    ]);
+    // ==========================================
+    // 4. SKENARIO: Validasi Input Kosong
+    // ==========================================
+    public function test_login_validation_required_fields()
+    {
+        $response = $this->postJson('/api/login', [
+            'email'    => '',
+            'password' => '',
+        ]);
 
-    $this->assertGuest();
-});
-
-test('users can logout', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)->post(route('logout'));
-
-    $this->assertGuest();
-    $response->assertRedirect(route('home'));
-});
-
-test('users are rate limited', function () {
-    $user = User::factory()->create();
-
-    RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
-
-    $response = $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'wrong-password',
-    ]);
-
-    $response->assertTooManyRequests();
-});
+        // Verifikasi error validasi (HTTP 422 Unprocessable Entity)
+        $response->assertStatus(422)
+                 ->assertJsonValidationErrors(['email', 'password']);
+    }
+}
